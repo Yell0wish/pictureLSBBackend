@@ -74,7 +74,6 @@ public class BitMapImage {
             for (int j = 0; j < 8; j++) {
                 dataByte |= (extract1Bit(i * 8 + j) << j);
             }
-            System.out.println(i);
             if (dataByte == 0) {
                 break;
             }
