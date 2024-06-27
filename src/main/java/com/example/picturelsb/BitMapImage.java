@@ -6,10 +6,14 @@ import lombok.Setter;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Random;
 
 @Getter
 @Setter
 public class BitMapImage {
+    public BitMapImage() {
+    }
+
     public BitMapImage(byte[] imageBytes) {
         this.imageBytes = imageBytes;
         this.bfOffBits = readLittleEndianIntOfFourBytes(imageBytes, 10);
@@ -17,6 +21,7 @@ public class BitMapImage {
         this.biWidth = readLittleEndianIntOfFourBytes(imageBytes, 18);
         this.biHeight = readLittleEndianIntOfFourBytes(imageBytes, 22);
         this.maxCapacity = getMaxCapacity();
+        this.random = new Random();
     }
 
     private byte[] imageBytes;
@@ -30,6 +35,8 @@ public class BitMapImage {
     private int biHeight;
 
     private int maxCapacity; // 单位是byte
+
+    private Random random;
 
     public int getMaxCapacity() {
         return biBitCount == 8 ? (biWidth * biHeight) / 8 : (biWidth * biHeight * 3) / 8;
@@ -58,6 +65,9 @@ public class BitMapImage {
                 embed1Bit(dataBytes.length * 8 + i, 0);
             }
         }
+
+//        addGaussianNoise(0, 10);
+//        System.out.println("bit准确率为" + calculateAccuracy(dataString, extract()) + "%");
     }
 
     public void embed1Bit(int offset, int bit) {
@@ -104,4 +114,43 @@ public class BitMapImage {
         return (bytes[offset] & 0xFF) | ((bytes[offset + 1] & 0xFF) << 8) | ((bytes[offset + 2] & 0xFF) << 16) | ((bytes[offset + 3] & 0xFF) << 24);
     }
 
+    public double generateGaussianNoise(double mean, double std) {
+        return mean + random.nextGaussian() * std;
+    }
+
+    public  void addGaussianNoise(double mean, double std) {
+        for (int i = bfOffBits; i < imageBytes.length; i++) {
+            int originalValue = imageBytes[i] & 0xFF; // 将byte转为无符号int
+            int noiseValue = (int) generateGaussianNoise(mean, std);
+            int newValue = originalValue + noiseValue;
+
+            // 确保新值在0到255范围内
+            if (newValue < 0) {
+                newValue = 0;
+            } else if (newValue > 255) {
+                newValue = 255;
+            }
+
+            imageBytes[i] = (byte) newValue;
+        }
+    }
+
+    public double calculateAccuracy(String original, String extracted) {
+        // 转换为utf-8 比较bit的准确率
+        byte[] originalBytes = original.getBytes(StandardCharsets.UTF_8);
+        byte[] extractedBytes = extracted.getBytes(StandardCharsets.UTF_8);
+
+        int totalBits = Math.max(originalBytes.length, extractedBytes.length) * 8;
+        int correctBits = 0;
+
+        for (int i = 0; i < Math.min(originalBytes.length, extractedBytes.length); i++) {
+            for (int j = 0; j < 8; j++) {
+                if (((originalBytes[i] >> j) & 1) == ((extractedBytes[i] >> j) & 1)) {
+                    correctBits++;
+                }
+            }
+        }
+
+        return (double) correctBits / totalBits * 100;
+    }
 }

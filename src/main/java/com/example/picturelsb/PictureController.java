@@ -44,6 +44,7 @@ public class PictureController {
     @CrossOrigin
     @PostMapping("/extract")
     public Map<String, String> extract(@RequestBody Map<String, String> payload) {
+        System.out.println("coming");
         String base64Image = payload.get("image");
         if (base64Image == null) {
             throw new IllegalArgumentException("No image data found!");
@@ -52,7 +53,38 @@ public class PictureController {
         byte[] imageBytes = Base64.getDecoder().decode(base64Image);
         BitMapImage bitMapImage = new BitMapImage(imageBytes);
         String extractedMessage = bitMapImage.extract();
-
+        System.out.println(extractedMessage);
         return Map.of("extractedMessage", extractedMessage);
+    }
+
+    @CrossOrigin
+    @PostMapping("/addNoise")
+    public Map<String, String> addNoise(@RequestBody Map<String, String> payload) {
+        String base64Image = payload.get("image");
+        if (base64Image == null) {
+            throw new IllegalArgumentException("No image data found!");
+        }
+
+        byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+        BitMapImage bitMapImage = new BitMapImage(imageBytes);
+        bitMapImage.addGaussianNoise(0, 10); // 你可以根据需求调整噪声的均值和标准差
+
+        String noisyImageBase64 = Base64.getEncoder().encodeToString(bitMapImage.getImageBytes());
+        return Map.of("image", noisyImageBase64);
+    }
+
+    @CrossOrigin
+    @PostMapping("/calculateAccuracy")
+    public Map<String, Double> calculateAccuracy(@RequestBody Map<String, String> payload) {
+        String originalMessage = payload.get("originalMessage");
+        String extractedMessage = payload.get("extractedMessage");
+        if (originalMessage == null || extractedMessage == null) {
+            throw new IllegalArgumentException("Original message or extracted message data not found!");
+        }
+
+        BitMapImage bitMapImage = new BitMapImage(); // 你可以创建一个虚拟的BitMapImage对象来调用方法
+        double accuracy = bitMapImage.calculateAccuracy(originalMessage, extractedMessage);
+
+        return Map.of("accuracy", accuracy);
     }
 }
