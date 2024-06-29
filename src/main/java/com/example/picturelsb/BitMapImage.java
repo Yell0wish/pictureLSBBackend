@@ -6,7 +6,9 @@ import lombok.Setter;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -48,7 +50,7 @@ public class BitMapImage {
         String dataString = new String(dataBytes, StandardCharsets.UTF_8);
         // 输出转换为String的字节数组
         System.out.println(dataString);
-        System.out.println("The data is " + dataString.length() + " bits");
+        System.out.println("The data is " + dataBytes.length + " bits");
         System.out.println("The maximum capacity of the image is " + maxCapacity + " bits");
         if (dataBytes.length > maxCapacity) {
             throw new IllegalArgumentException("The data is " + (dataBytes.length ) + " bits long, which exceeds the maximum capacity of the image: " +  maxCapacity + " bits");
@@ -65,10 +67,32 @@ public class BitMapImage {
                 embed1Bit(dataBytes.length * 8 + i, 0);
             }
         }
-
-//        addGaussianNoise(0, 10);
-//        System.out.println("bit准确率为" + calculateAccuracy(dataString, extract()) + "%");
     }
+
+    public void embedWithCypher(String data, String cypher) {
+        byte[] dataBytes = data.getBytes(StandardCharsets.UTF_8);
+        if (dataBytes.length > maxCapacity) {
+            throw new IllegalArgumentException("The data is " + (dataBytes.length) + " bytes long, which exceeds the maximum capacity of the image: " + maxCapacity + " bytes");
+        }
+
+        Random Random = new Random(cypher.hashCode());
+        Set<Integer> generatedNumbers = new HashSet<>();
+
+        // Embed the data bytes
+        for (int i = 0; i < dataBytes.length * 8; i++) {
+            int randomInt = generateUniqueRandomInt(Random, generatedNumbers);
+            embed1Bit(randomInt, (dataBytes[i / 8] >> (i % 8)) & 1);
+        }
+        // If dataBytes.length < maxCapacity, add 0x00 at the end
+        if (dataBytes.length < maxCapacity) {
+            for (int i = dataBytes.length * 8; i < maxCapacity * 8; i++) {
+                int randomInt = generateUniqueRandomInt(Random, generatedNumbers);
+                embed1Bit(randomInt, 0);
+            }
+        }
+        System.out.println("finish");
+    }
+
 
     public void embed1Bit(int offset, int bit) {
         int index = bfOffBits + offset;
@@ -77,6 +101,10 @@ public class BitMapImage {
     }
 
     public String extract() {
+        // 输出图片的宽度和高度
+        System.out.println("The width of the image is " + biWidth);
+        System.out.println("The height of the image is " + biHeight);
+
         ArrayList<Byte> dataBytesList = new ArrayList<>();
 
         for (int i = 0; i < maxCapacity; i += 1) {
@@ -94,7 +122,40 @@ public class BitMapImage {
         for (int i = 0; i < dataBytesList.size(); i++) {
             dataBytes[i] = dataBytesList.get(i);
         }
+        System.out.println(new String(dataBytes, StandardCharsets.UTF_8).length());
+        return new String(dataBytes, StandardCharsets.UTF_8);
+    }
 
+    public String extractWithCypher(String cypher) {
+        System.out.println(cypher);
+        Random Random = new Random(cypher.hashCode());
+        Set<Integer> generatedNumbers = new HashSet<>();
+
+        ArrayList<Byte> dataBytesList = new ArrayList<>();
+        int dataByte = 0;
+        int bitIndex = 0;
+
+        for (int i = 0; i < maxCapacity * 8; i++) {
+            int randomInt = generateUniqueRandomInt(Random, generatedNumbers);
+            int bit = extract1Bit(randomInt);
+            dataByte |= (bit << bitIndex);
+            bitIndex++;
+
+            if (bitIndex == 8) {
+                if (dataByte == 0) {
+                    System.out.println("ccccc");
+                    break;
+                }
+                dataBytesList.add((byte) dataByte);
+                dataByte = 0;
+                bitIndex = 0;
+            }
+        }
+
+        byte[] dataBytes = new byte[dataBytesList.size()];
+        for (int i = 0; i < dataBytesList.size(); i++) {
+            dataBytes[i] = dataBytesList.get(i);
+        }
         return new String(dataBytes, StandardCharsets.UTF_8);
     }
 
@@ -152,5 +213,15 @@ public class BitMapImage {
         }
 
         return (double) correctBits / totalBits * 100;
+    }
+
+    private int generateUniqueRandomInt(Random Random, Set<Integer> generatedNumbers) {
+        int randomInt;
+        do {
+            randomInt = Random.nextInt(maxCapacity * 8);
+        } while (generatedNumbers.contains(randomInt));
+        generatedNumbers.add(randomInt);
+        System.out.println(randomInt);
+        return randomInt;
     }
 }

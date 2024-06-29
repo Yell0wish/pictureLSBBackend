@@ -87,4 +87,38 @@ public class PictureController {
 
         return Map.of("accuracy", accuracy);
     }
+
+    @CrossOrigin
+    @PostMapping("/embedWithCypher")
+    public Map<String, String> embedWithCypher(@RequestBody Map<String, String> payload) {
+        String base64Image = payload.get("image");
+        String message = payload.get("message");
+        String cypher = payload.get("cypher");
+        if (base64Image == null || message == null || cypher == null) {
+            throw new IllegalArgumentException("Image, message, or cypher data not found!");
+        }
+
+        byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+        BitMapImage bitMapImage = new BitMapImage(imageBytes);
+        bitMapImage.embedWithCypher(message, cypher);
+
+        String embeddedImageBase64 = Base64.getEncoder().encodeToString(bitMapImage.getImageBytes());
+        System.out.println("back");
+        return Map.of("image", embeddedImageBase64);
+    }
+
+    @CrossOrigin
+    @PostMapping("/extractWithCypher")
+    public Map<String, String> extractWithCypher(@RequestBody Map<String, String> payload) {
+        String base64Image = payload.get("image");
+        String cypher = payload.get("cypher");
+        if (base64Image == null || cypher == null) {
+            throw new IllegalArgumentException("Image or cypher data not found!");
+        }
+
+        byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+        BitMapImage bitMapImage = new BitMapImage(imageBytes);
+        String extractedMessage = bitMapImage.extractWithCypher(cypher);
+        return Map.of("extractedMessage", extractedMessage);
+    }
 }
